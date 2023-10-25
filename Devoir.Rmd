@@ -1,0 +1,90 @@
+---
+title: "STT760 - Devoir 1 - Partie pratique"
+output: html_notebook
+---
+```{r}
+if (!requireNamespace("BiocManager", quietly = TRUE))
+install.packages("BiocManager")
+BiocManager::install(c("gRain", "gRbase","graph","RBGL","Rgraphviz"))
+library("gRain")
+library("gRbase")
+library("Rgraphviz")
+```
+#Création d’un objet GraphNel
+Un graphe peut être créer suivant la commande dag() de la façon suivante.
+
+```{r}
+dag_gicleur = dag(~C, ~P|C, ~O|C, ~G|O:P)
+dag_gicleur
+```
+
+Le graphe orienté résultant peut alors être visualisé via l’exécution suivante.
+```{r}
+plot(dag_gicleur)
+```
+Il est possible de représenter un graphe orienté à l’aide d’une matrice d’adjacence [M ] dont les entrées sont
+des 0 ou des 1.
+```{r}
+Adj_gicleur = as(dag_gicleur,"matrix")
+Adj_gicleur
+```
+La d-séparation peut-être vérifiée à l’aide de la fonction dSep() de la librairie ggm.
+```{r}
+library(ggm)
+
+dSep(Adj_gicleur,"P","O","G")
+dSep(Adj_gicleur,"P","O",NULL)
+dSep(Adj_gicleur,"P","O","C")
+```
+#Création et interrogation d’un réseau bayésien
+
+Dans ce qui suit, nous verrons comment créer un réseau bayésien en spécifiant ces probabilités avec la fonction
+cptable() de la librairie gRain.
+```{r}
+library("gRain")
+val = c("0","1") ## valeurs possibles pour chacune des variables
+cp_C <- cptable(~C,values=c(50,50),levels=val)
+cp_P <- cptable(~P|C,values=c(90,10,5,95),levels=val)
+cp_O <- cptable(~O|C, values = c(40,60,55,45),levels=val)
+cp_G <- cptable(~G|P+O,values = c(1,0,0,1,0,1,0,1),levels=val)
+```
+Le réseau peut alors être créé avec la fonction compileCPT de la librairie gRain. On crée ensuite un objet
+de type grain (GRAphical Independence Network).
+```{r}
+library("gRain")
+net_list = compileCPT(list(cp_C,cp_P,cp_O,cp_G))
+grain_gicleur = grain(net_list)
+plot(grain_gicleur$dag)
+```
+Un objet de type grain peut alors être utilisé pour le calcul de probabilité. Par exemple, les commandes
+ci-dessous permettent de calculer respectivement la probabilité marginale que le gazon soit mouillé et la
+probabilité qu’il ait plu sachant l’état du gazon.
+```{r}
+querygrain(grain_gicleur, nodes="G", type="marginal")
+```
+```{r}
+querygrain(grain_gicleur, nodes=c("P","G"), type="conditional")
+```
+
+Il est aussi possible d’interroger la distribution du graphe étant donné un événement fixe. Pour ce faire, il
+faut d’abord mettre à jour le graphe et la distribution de probabilité étant donné l’événement.
+```{r}
+grain_gicleur_mouille = setFinding(grain_gicleur, nodes=c("G","C"),states=c("1","1"))
+querygrain(grain_gicleur_mouille, nodes=c("P","O"), type="joint")
+```
+## Une structure alternative
+```{r}
+update.packages(ask = FALSE, checkBuilt = TRUE)
+```
+
+```{r}
+install.packages("bnlearn")
+library(bnlearn)
+```
+
+```{r}
+data(marks)
+names(marks)
+```
+
+
